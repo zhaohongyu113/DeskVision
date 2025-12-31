@@ -17,10 +17,16 @@ handler = None
 import torch.distributed as dist
 
 try:
-    import av
+    import av  # PyAV package name is `av`
+except ImportError:
+    av = None
+    print("Please install PyAV (`pip install av`) to use video processing functions.")
+
+try:
     from decord import VideoReader, cpu
 except ImportError:
-    print("Please install pyav to use video processing functions.")
+    VideoReader = None
+    cpu = None
 
 def process_video_with_decord(video_file, data_args):
     vr = VideoReader(video_file, ctx=cpu(0), num_threads=1)

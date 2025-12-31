@@ -19,8 +19,22 @@ import requests
 import copy
 import torch
 import warnings
+from transformers.utils import logging as hf_logging
 
 warnings.filterwarnings("ignore")
+hf_logging.set_verbosity_error()
+
+MAX_NEW_TOKENS = int(os.environ.get("DESKVISION_MAX_NEW_TOKENS", "512"))
+
+
+def _get_default_font(size: int = 15) -> ImageFont.ImageFont:
+    font_path = Path(__file__).resolve().with_name("default.ttf")
+    try:
+        if font_path.exists():
+            return ImageFont.truetype(str(font_path), size)
+    except Exception:
+        pass
+    return ImageFont.load_default()
 
 
 def _load_infer_config() -> dict:
@@ -63,8 +77,7 @@ def draw_bbox_with_text(image_path, bbox, text, output_path):
     draw.rectangle(bbox, outline="blue", width=3)
 
     # 标注文本
-    # font = ImageFont.load_default()  # 使用默认字体
-    font = ImageFont.truetype("default.ttf", 15)
+    font = _get_default_font(15)
     if bbox[1]-30<20:  
         text_position = (bbox[0], bbox[1] + 30)  # 将文本放在bbox的上方
     else:
@@ -82,7 +95,7 @@ def draw_bbox_with_text_list(image_path, bboxs, texts, output_path):
     image = Image.open(image_path).convert('RGB')
     draw = ImageDraw.Draw(image)
     image_size = image.size
-    font = ImageFont.truetype("default.ttf", 15)
+    font = _get_default_font(15)
     for bbox, text in zip(bboxs, texts):
         try:
             bbox = denormalize(bbox, image_size)
@@ -122,7 +135,7 @@ def main():
             image_sizes=image_sizes,
             do_sample=False,
             temperature=0,
-            max_new_tokens=4096,
+            max_new_tokens=MAX_NEW_TOKENS,
         )
         text_outputs = tokenizer.batch_decode(cont, skip_special_tokens=True)
         print("instruction task; input: {}, output: {}".format(text_input, text_outputs[0]))

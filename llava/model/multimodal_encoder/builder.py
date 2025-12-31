@@ -20,6 +20,10 @@ def build_vision_tower(vision_tower_cfg, **kwargs):
         else:
             return CLIPVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)
     elif "siglip" in vision_tower:
+        # SigLIP often gets constructed under `low_cpu_mem_usage=True` model init,
+        # which can create `meta` tensors and crash when moving to a real device.
+        # Delay loading here; `load_pretrained_model()` will call `vision_tower.load_model()` later.
+        kwargs["delay_load"] = True
         return SigLipVisionTower(vision_tower, vision_tower_cfg=vision_tower_cfg, **kwargs)
     elif vision_tower.startswith("hf:"):
         return HFVisionTower(vision_tower, args=vision_tower_cfg, **kwargs)

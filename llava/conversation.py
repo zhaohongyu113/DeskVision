@@ -1,6 +1,7 @@
 import dataclasses
 from enum import auto, Enum
 from typing import List, Any, Dict, Union, Tuple
+import os
 import re
 import base64
 from io import BytesIO
@@ -378,8 +379,15 @@ conv_llava_llama_2 = Conversation(
 )
 
 def safe_load_tokenizer(tokenizer_id):
+    """Best-effort tokenizer loader.
+
+    This file is imported by inference scripts. Avoid long network timeouts by
+    defaulting to offline-only loads. Opt-in to downloads by setting:
+    - DESKVISION_HF_ALLOW_DOWNLOAD=1
+    """
+    allow_download = os.environ.get("DESKVISION_HF_ALLOW_DOWNLOAD", "").strip().lower() in {"1", "true", "yes", "y"}
     try:
-        return AutoTokenizer.from_pretrained(tokenizer_id)
+        return AutoTokenizer.from_pretrained(tokenizer_id, local_files_only=not allow_download)
     except Exception:
         return None
 

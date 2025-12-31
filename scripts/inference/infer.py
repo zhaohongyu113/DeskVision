@@ -14,8 +14,22 @@ from PIL import Image, ImageDraw, ImageFont
 import copy
 import torch
 import warnings
+from transformers.utils import logging as hf_logging
 
 warnings.filterwarnings("ignore")
+hf_logging.set_verbosity_error()
+
+MAX_NEW_TOKENS = 512
+
+
+def _get_default_font(size: int = 15) -> ImageFont.ImageFont:
+    font_path = Path(__file__).resolve().with_name("default.ttf")
+    try:
+        if font_path.exists():
+            return ImageFont.truetype(str(font_path), size)
+    except Exception:
+        pass
+    return ImageFont.load_default()
 
 
 def _load_infer_config() -> dict:
@@ -102,8 +116,7 @@ def draw_bbox_with_text(image_path, bbox, text, output_path):
     draw.rectangle(bbox, outline="blue", width=3)
 
     # 标注文本
-    # font = ImageFont.load_default()  # 使用默认字体
-    font = ImageFont.truetype("default.ttf", 15)
+    font = _get_default_font(15)
     if bbox[1]-30<20:  
         text_position = (bbox[0], bbox[1] + 30)  # 将文本放在bbox的上方
     else:
@@ -121,7 +134,7 @@ def draw_bbox_with_text_list(image_path, bboxs, texts, output_path):
     image = Image.open(image_path).convert('RGB')
     draw = ImageDraw.Draw(image)
     image_size = image.size
-    font = ImageFont.truetype("default.ttf", 15)
+    font = _get_default_font(15)
     for bbox, text in zip(bboxs, texts):
         try:
             bbox = denormalize(bbox, image_size)
@@ -159,7 +172,7 @@ def infer_model(image_tensor, text_input, image_sizes):
         image_sizes=image_sizes,
         do_sample=False,
         temperature=0,
-        max_new_tokens=4096,
+        max_new_tokens=MAX_NEW_TOKENS,
     )
     text_outputs = tokenizer.batch_decode(cont, skip_special_tokens=True)
     # print("instruction task; input: {}, output: {}".format(text_input, text_outputs[0]))
@@ -257,8 +270,10 @@ if __name__ == "__main__":
     parser.add_argument('--input_text', help='Input text. If it is "ocr", enter the absolute coordinates "[x1,y1,x2,y2]" of the area to be identified; "grounding" means enter the content to be located; others are instructions;', default='', type=str)
     parser.add_argument('--input_image', help='Input image path to be understood by the model', required=True, type=str)
     parser.add_argument('--pretrained_models', help='the path of pretrained models', default=_default_pretrained_models_path(), type=str)
+    parser.add_argument('--max_new_tokens', help='Maximum number of tokens to generate (lower is faster on CPU-offloaded models)', default=512, type=int)
 
     args = parser.parse_args()
+    MAX_NEW_TOKENS = max(1, int(args.max_new_tokens))
     pretrained = args.pretrained_models
     save_root = "./visual_results"
     if not os.path.exists(save_root):
