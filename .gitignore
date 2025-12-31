@@ -71,3 +71,6 @@ playground/*.json
 mlx_configs/
 data_processing/
 # demo/
+
+# Local inference config
+scripts/inference/config.json

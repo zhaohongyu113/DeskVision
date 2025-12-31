@@ -3,6 +3,7 @@ import datetime, time
 import base64
 import uuid
 import json
+from pathlib import Path
 import os, sys
 import numpy as np
 import traceback
@@ -20,6 +21,27 @@ import torch
 import warnings
 
 warnings.filterwarnings("ignore")
+
+
+def _load_infer_config() -> dict:
+    config_path = Path(__file__).resolve().with_name("config.json")
+    if not config_path.exists():
+        return {}
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _default_pretrained_models_path() -> str:
+    env_value = os.environ.get("DESKVISION_PRETRAINED_MODELS")
+    if env_value:
+        return env_value
+    cfg = _load_infer_config()
+    cfg_value = cfg.get("pretrained_models") if isinstance(cfg, dict) else None
+    if isinstance(cfg_value, str) and cfg_value.strip():
+        return cfg_value
+    return "../../pretrained_models"
 
 def denormalize(bbox, image_size):
     bbox = [
@@ -197,7 +219,7 @@ def main():
 
 
 if __name__ == "__main__":
-    pretrained = "../../pretrained_models"
+    pretrained = _default_pretrained_models_path()
     save_root = "./visual_results"
     if not os.path.exists(save_root):
         os.mkdir(save_root)

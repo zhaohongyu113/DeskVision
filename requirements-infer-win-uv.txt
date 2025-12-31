@@ -1,0 +1,18 @@
+# Minimal dependencies for running inference + gradio demo on Windows using uv.
+# Note: install PyTorch (torch/torchvision) separately from the official PyTorch index URL.
+
+transformers==4.37.0
+tokenizers~=0.15.2
+accelerate>=0.29.1
+sentencepiece~=0.1.99
+numpy<2
+pillow
+requests
+
+einops==0.6.1
+einops-exts==0.0.4
+
+timm
+opencv-python
+# Gradio demo
+gradio

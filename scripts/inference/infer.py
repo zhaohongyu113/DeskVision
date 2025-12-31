@@ -1,4 +1,6 @@
 import os, sys
+import json
+from pathlib import Path
 import re
 import argparse
 import numpy as np
@@ -14,6 +16,39 @@ import torch
 import warnings
 
 warnings.filterwarnings("ignore")
+
+
+def _load_infer_config() -> dict:
+    """Load optional inference config.
+
+    Search order (first match wins):
+    1) scripts/inference/config.json (next to this file)
+    """
+    config_path = Path(__file__).resolve().with_name("config.json")
+    if not config_path.exists():
+        return {}
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _default_pretrained_models_path() -> str:
+    """Determine pretrained model directory.
+
+    Priority:
+    1) env var DESKVISION_PRETRAINED_MODELS
+    2) scripts/inference/config.json: {"pretrained_models": "..."}
+    3) historical default ../../pretrained_models
+    """
+    env_value = os.environ.get("DESKVISION_PRETRAINED_MODELS")
+    if env_value:
+        return env_value
+    cfg = _load_infer_config()
+    cfg_value = cfg.get("pretrained_models") if isinstance(cfg, dict) else None
+    if isinstance(cfg_value, str) and cfg_value.strip():
+        return cfg_value
+    return "../../pretrained_models"
 
 
 def denormalize(bbox, image_size):
@@ -221,7 +256,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--input_text', help='Input text. If it is "ocr", enter the absolute coordinates "[x1,y1,x2,y2]" of the area to be identified; "grounding" means enter the content to be located; others are instructions;', default='', type=str)
     parser.add_argument('--input_image', help='Input image path to be understood by the model', required=True, type=str)
-    parser.add_argument('--pretrained_models', help='the path of pretrained models', default='../../pretrained_models', type=str)
+    parser.add_argument('--pretrained_models', help='the path of pretrained models', default=_default_pretrained_models_path(), type=str)
 
     args = parser.parse_args()
     pretrained = args.pretrained_models
